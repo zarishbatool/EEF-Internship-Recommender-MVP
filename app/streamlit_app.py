@@ -2,7 +2,6 @@ import streamlit as st
 import sys
 from pathlib import Path
 
-# Project root ko path mein add karo
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -224,8 +223,14 @@ if generate:
     try:
         with st.spinner("Matching tracks & building roadmap..."):
             result = engine.recommend(candidate)
-            # Pydantic model → dict
-            data = result.model_dump() if hasattr(result, "model_dump") else result.dict()
+            if isinstance(result, dict):
+                data = result
+            elif hasattr(result, "model_dump"):
+                data = result.model_dump()
+            elif hasattr(result, "dict"):
+                data = result.dict()
+            else:
+                data = dict(result)
 
         m1, m2, m3 = st.columns(3)
         m1.metric("Recommended Track", data["recommended_track"])
@@ -234,22 +239,36 @@ if generate:
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        st.markdown(f'<div class="card"><h3>AI Reasoning</h3><p style="color:#b0a0a8;line-height:1.7;margin:0;font-size:14px;">{data["reasoning_summary"]}</p></div>', unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="card"><h3>AI Reasoning</h3><p style="color:#b0a0a8;line-height:1.7;margin:0;font-size:14px;">{data["reasoning_summary"]}</p></div>',
+            unsafe_allow_html=True
+        )
 
         col1, col2 = st.columns(2)
         with col1:
-            strengths = "".join(f'<span class="pill pill-ok">{i}</span>' for i in data["strength_analysis"]) or '<span style="color:#6b7280">None</span>'
+            strengths = "".join(
+                f'<span class="pill pill-ok">{i}</span>' for i in data["strength_analysis"]
+            ) or '<span style="color:#6b7280">None</span>'
             st.markdown(f'<div class="card"><h3>Strengths</h3>{strengths}</div>', unsafe_allow_html=True)
         with col2:
-            weaknesses = "".join(f'<span class="pill pill-warn">{i}</span>' for i in data["weakness_analysis"]) or '<span style="color:#6b7280">None</span>'
+            weaknesses = "".join(
+                f'<span class="pill pill-warn">{i}</span>' for i in data["weakness_analysis"]
+            ) or '<span style="color:#6b7280">None</span>'
             st.markdown(f'<div class="card"><h3>Weaknesses</h3>{weaknesses}</div>', unsafe_allow_html=True)
 
-        missing = "".join(f'<span class="pill pill-err">{s}</span>' for s in data["missing_skills"]) or '<span style="color:#5eead4">No major gaps</span>'
+        missing = "".join(
+            f'<span class="pill pill-err">{s}</span>' for s in data["missing_skills"]
+        ) or '<span style="color:#5eead4">No major gaps</span>'
         st.markdown(f'<div class="card"><h3>Missing Skills</h3>{missing}</div>', unsafe_allow_html=True)
 
-        st.markdown(f'<div class="card"><h3>Recommended Mentor</h3><p style="color:#fff;font-size:18px;margin:0;font-weight:600;">{data["mentor_recommendation"]}</p></div>', unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="card"><h3>Recommended Mentor</h3><p style="color:#fff;font-size:18px;margin:0;font-weight:600;">{data["mentor_recommendation"]}</p></div>',
+            unsafe_allow_html=True
+        )
 
-        steps = "".join(f'<div class="step"><b>Step {i}</b> — {s}</div>' for i, s in enumerate(data["roadmap"], 1))
+        steps = "".join(
+            f'<div class="step"><b>Step {i}</b> — {s}</div>' for i, s in enumerate(data["roadmap"], 1)
+        )
         st.markdown(f'<div class="card"><h3>Learning Roadmap</h3>{steps}</div>', unsafe_allow_html=True)
 
         st.markdown('<p class="section-title">ALTERNATIVE TRACKS</p>', unsafe_allow_html=True)
